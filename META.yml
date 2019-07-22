@@ -1,0 +1,15 @@
+--- #YAML:1.0
+name: XML-Structured
+version: 1.3
+abstract: Simple conversion API from XML to perl structures and back
+license: perl
+author:
+  - Michael Schroeder, mls@suse.de
+provides:
+  XML::Structured:
+    file: Structured.pm
+    version: 1.3
+meta-spec:
+  version: 1.3
+  url: http://module-build.sourceforge.net/META-spec-v1.3.html
+generated_by: Michael Schroeder
