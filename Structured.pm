@@ -12,7 +12,7 @@ use Encode;
 
 use strict;
 
-our $bytes;
+our $bytes = 0;
 our $pureperl;
 our $preferred_parser;
 
@@ -649,7 +649,7 @@ into a single "_content" element. As example,
       <address street="rural road 12" city="tempe"/>world
     </user>
 
-would set the _content element to C<hello world> (the dtd must allow
+would set the _content element to C<hello\n  world> (the dtd must allow
 a _content element, of course). If the dtd is
 
     $dtd = [ 'user' =>
@@ -663,7 +663,8 @@ the xml string created by XMLout() will be:
     <user login="foo">
       <address street="broadway 7" city="new york" />
       <address street="rural road 12" city="tempe" />
-      hello world    
+      hello
+      world    
     </user>
 
 The exact input cannot be re-created, as the positions and the

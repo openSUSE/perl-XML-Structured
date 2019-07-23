@@ -436,7 +436,7 @@ CODE:
 	    {
 	      if (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PV)
 		sv = (SV *)SvRV(sv);
-	      if (handlechar_bytes && !SvUTF8(sv))
+	      if (handlechar_bytes)
 	        SvUTF8_off(strsv);
 	      sv_catsv(sv, strsv);
 	    }
@@ -646,6 +646,8 @@ CODE:
 	    avalue = ST(i + 1);
 	  }
 	  anamelen = strlen(aname);
+	  if (handlechar_bytes)
+	    SvUTF8_off(avalue);
 	  svp = hv_fetch(knownhv, aname, anamelen, 0);
 	  ksv = svp ? *svp : 0;
 	  if (!ksv || !SvOK(ksv))
