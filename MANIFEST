@@ -1,0 +1,12 @@
+Makefile.PL
+MANIFEST
+META.yml
+README
+Structured.pm
+Structured.xs
+t/basic.t
+t/basic_pure.t
+t/bytes.t
+t/bytes_pure.t
+t/utf8.t
+t/utf8_pure.t
