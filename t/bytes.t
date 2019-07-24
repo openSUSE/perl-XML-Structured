@@ -3,6 +3,8 @@
 use strict;
 use Test::More tests => 3;
 
+BEGIN { $XML::Structured::preferred_parser = $ENV{'PREFERRED_PARSER'} }
+BEGIN { $XML::Structured::force_preferred_parser = 1 } 
 use XML::Structured ':bytes';
 
 #######################
