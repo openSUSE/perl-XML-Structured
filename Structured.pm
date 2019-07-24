@@ -15,6 +15,7 @@ use strict;
 our $bytes = 0;
 our $pureperl;
 our $preferred_parser;
+our $force_preferred_parser;
 
 if (!$pureperl) {
   require XSLoader;
@@ -353,11 +354,15 @@ sub _saxparser {
 
 sub _chooseparser {
   if ($preferred_parser) {
-    eval { require $preferred_parser };
-    if (!$@) {
+    my $module = $preferred_parser;
+    $module =~ s/::/\//g;
+    eval {
+      require XML::SAX if $preferred_parser ne 'XML::Parser';
+      require "$module.pm";
       $XML::SAX::ParserPackage = $preferred_parser if $preferred_parser ne 'XML::Parser' && $preferred_parser ne 'XML::SAX';
-      return $preferred_parser eq 'XML::Parser' ? \&_xmlparser : \&_saxparser;
-    }
+    };
+    return $preferred_parser eq 'XML::Parser' ? \&_xmlparser : \&_saxparser unless $@;
+    die($@) if $force_preferred_parser;
   }
   eval { require XML::Parser; };
   return \&_xmlparser unless $@;
