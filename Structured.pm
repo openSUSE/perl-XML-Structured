@@ -300,29 +300,24 @@ package XML::Structured;
 
 my $xmlinparser;
 
-sub _xmlparser_sethashsalt {
-  XML::Parser::Expat::SetHashSalt($_[0]->{'Parser'}, int(rand(2**32)));
-}
-
 sub _xmlparser {
   my ($dtd, $str) = @_;
   my $p;
-  my $init;
-  $init = \&_xmlparser_sethashsalt if defined &XML::Parser::Expat::SetHashSalt;
+  my $hashsalt = int(rand(2**32));
   if ($pureperl) {
     $p = new XML::Parser(Style => 'Subs', 'Handlers' => {
       'Start' => \&_handle_start_slow,
       'End'   => \&_handle_end_slow,
       'Char'  => \&_handle_char_slow,
-    });
+    }, 'HashSalt' => $hashsalt);
   } else {
     $p = new XML::Parser(Style => 'Subs', 'Handlers' => {
       'Start' => \&_handle_start,
       'End'   => \&_handle_end,
       'Char'  => \&_handle_char,
-    });
+    }, 'HashSalt' => $hashsalt);
   }
-  $p->setHandlers('ExternEnt' => sub {undef}, 'Init' => $init );
+  $p->setHandlers('ExternEnt' => sub {undef});
   my $ret = {};
   $p->{'work'} = [ {$dtd->[0] => [ 0, _toknown(@$dtd) ]}, $ret, undef ];
   $p->parse($str);
