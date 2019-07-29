@@ -116,16 +116,15 @@ my $xml5 = qq{<user login="foo">
 my $xml5_2 = qq{<user login="foo">
   <address street="broadway 7" city="new york"/>
   <address street="rural road 12" city="tempe"/>
-  hello
-  world
+hello world
 </user>
 };
 my $data5 = {
   'login' => 'foo',
   'address' => [ { street => "broadway 7",  city => "new york" },
                  { street => "rural road 12",  city => "tempe" }, ],
-  '_content' => 'hello
-  world',
+  '_content' => 'hello world
+',
 };
 
 is_deeply(XMLin($dtd5, $xml5), $data5, 'xml->data 5');

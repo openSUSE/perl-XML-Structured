@@ -98,6 +98,7 @@ sub _workout {
     my $ee = '';
     _addescaped($ee, $en);
     if (!ref($e) && $e eq '_content' && !$gotel) {
+      die("'$e' must be scalar\n") if ref($d2{$e});
       $gotel = 2;	# special marker to strip indent
       _addescaped3($ret, '>', $d2{$e}, "\n");
       delete $d2{$e};
@@ -108,8 +109,8 @@ sub _workout {
     if (!ref($e)) {
       die("'$e' must be scalar\n") if ref($d2{$e});
       if ($e eq '_content') {
-	my $c = $d2{$e};
-        _addescaped3($ret, "$indent  ", $c, "\n");
+        $gotel = 2;
+        _addescaped3($ret, '', $d2{$e}, "\n");
         delete $d2{$e};
         next;
       }
@@ -169,7 +170,11 @@ sub _handle_start_slow {
     # deal with SAX
     ($e, @a) = ($e->{'Name'}, map {$_->{'Name'} => $_->{'Value'}} values %{$e->{'Attributes'} || {}});
   }
-  my ($known, $out) = @{$p->{'work'}}[-3, -2];
+  my ($known, $out, $oldchr) = @{$p->{'work'}}[-3, -2, -1];
+  if ($oldchr && $out) {
+    $oldchr = \$out->{'_content'} unless ref($oldchr);
+    $$oldchr .= "\0";
+  }
   my $chr;
 
   my $ke = $known->{$e};
@@ -235,9 +240,16 @@ sub _handle_start_slow {
 sub _handle_end_slow {
   my ($p) = @_;
   my (undef, $out, $chr) = splice(@{$p->{'work'}}, -3);
-  if ($out && $chr) {
-    $$chr =~ s/^[ \t\r\n]+//s;
-    $$chr =~ s/[ \t\r\n]+$//s;
+  if ($out && defined($chr)) {
+    $chr = \$out->{'_content'} unless ref($chr);
+    if ($$chr =~ /\0/s) {
+      $$chr =~ s/^[ \t\r\n\0]*\0[ \t]*\r?\n?//s;
+      $$chr =~ s/\r?\n?[ \t]*\0[ \t\r\n\0]*$//s;
+      if ($$chr =~ /\0/s) {
+        $$chr =~ s/(?<![ \t\r\n\0])\0+(?![ \t\r\n\0])//sg;
+        $$chr =~ s/[ \t\r\n]*\0[ \t\r\n\0]*/ /sg;
+      }
+    }
     delete $out->{'_content'} if $$chr eq '';
   }
 }
@@ -508,7 +520,7 @@ The very simple example for a dtd is:
 
 This dtd will accept/create XML like:
 
-    <user login="foo" password="bar" />
+    <user login="foo" password="bar"/>
 
 XMLin doesn't care if "login" or "password" are attributes or
 elements, so
@@ -577,7 +589,7 @@ will translate to
 
 instead of
 
-    <user login="foo" password="bar" />
+    <user login="foo" password="bar"/>
 
 =head2 sub-elements
 
@@ -596,7 +608,7 @@ one element. Here is an example:
 Valid xml for this dtd looks like:
 
     <user login="foo">
-      <address street="broadway 7" city="new york" />
+      <address street="broadway 7" city="new york"/>
     </user>
 
 It is sometimes useful to specify such dtds in multiple steps:
@@ -635,8 +647,8 @@ Or, with the $addressdtd definition used in the previous example:
 Accepted XML is:
 
     <user login="foo">
-      <address street="broadway 7" city="new york" />
-      <address street="rural road 12" city="tempe" />
+      <address street="broadway 7" city="new york"/>
+      <address street="rural road 12" city="tempe"/>
     </user>
 
 =head2 the _content pseudo-element
@@ -649,7 +661,7 @@ into a single "_content" element. As example,
       <address street="rural road 12" city="tempe"/>world
     </user>
 
-would set the _content element to C<hello\n  world> (the dtd must allow
+would set the _content element to C<hello world\n> (the dtd must allow
 a _content element, of course). If the dtd is
 
     $dtd = [ 'user' =>
@@ -661,10 +673,9 @@ a _content element, of course). If the dtd is
 the xml string created by XMLout() will be:
 
     <user login="foo">
-      <address street="broadway 7" city="new york" />
-      <address street="rural road 12" city="tempe" />
-      hello
-      world    
+      <address street="broadway 7" city="new york"/>
+      <address street="rural road 12" city="tempe"/>
+    hello world    
     </user>
 
 The exact input cannot be re-created, as the positions and the

@@ -352,6 +352,139 @@ addsimple(SV *dstsv, SV *srcsv)
   SvCUR_set(dstsv, dlen + srcl);
 }
 
+static int
+trim_content(SV *sv)
+{
+  const char *s;
+  STRLEN dlen, dlenorig, dlen0;
+
+  dlen = dlenorig = SvCUR(sv);
+
+  /* trim right side of string */
+  if (dlen)
+    {
+      s = SvPVX(sv) + dlen - 1;
+      dlen0 = 0;
+      while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n' || *s == '\0')
+	{
+	  if (*s == 0)
+	    dlen0 = dlen;
+	  s--;
+	  if (!--dlen)
+	    break;
+	}
+      if (dlen0 > 1)
+	{
+	  dlen = dlen0 - 1;
+	  s = SvPVX(sv) + dlen - 1;
+	  while (dlen && (*s == ' ' || *s == '\t'))
+	    {
+	      s--;
+	      dlen--;
+	    }
+	  if (dlen && *s == '\n')
+	    {
+	      s--;
+	      dlen--;
+	    }
+	  if (dlen && *s == '\r')
+	    {
+	      s--;
+	      dlen--;
+	    }
+	}
+      else if (!dlen0)
+	dlen = dlenorig;
+      if (dlen != dlenorig)
+	{
+	  SvCUR_set(sv, dlen);
+	  dlenorig = dlen;
+	}
+    }
+
+  /* trim left side of string */
+  if (dlen)
+    {
+      s = SvPVX(sv);
+      dlen0 = 0;
+      while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n' || *s == '\0')
+	{
+	  if (*s == 0)
+	    dlen0 = dlen;
+	  s++;
+	  if (!--dlen)
+	    break;
+	}
+      if (dlen0 > 1)
+	{
+	  dlen = dlen0 - 1;
+	  s = SvPVX(sv) + dlenorig - dlen;
+	  while (dlen && (*s == ' ' || *s == '\t'))
+	    {
+	      s++;
+	      dlen--;
+	    }
+	  if (dlen && *s == '\r')
+	    {
+	      s++;
+	      dlen--;
+	    }
+	  if (dlen && *s == '\n')
+	    {
+	      s++;
+	      dlen--;
+	    }
+	}
+      else if (!dlen0)
+	dlen = dlenorig;
+      if (dlen != dlenorig)
+	{
+	  sv_chop(sv, s);
+	  dlenorig = dlen;
+	}
+    }
+  
+  /* replace every \0 left in the string */
+  if (dlen)
+    {
+      const char *start, *end;
+      s = SvPVX(sv);
+      start = s;
+      end = s + dlen;
+      for (; s < end; s++)
+        if (*s == 0)
+	  {
+	    int spaceseen = 0;
+	    const char *cutstart, *cutend;
+	    /* trim to left */
+	    cutstart = s;
+	    while (cutstart > start && (cutstart[-1] == ' ' || cutstart[-1] == '\t' || cutstart[-1] == '\r' || cutstart[-1] == '\n'))
+	      {
+	        cutstart--;
+		spaceseen = 1;
+	      }
+	    /* trim to right */
+	    cutend = s + 1;
+	    while (cutend < end && (cutend[0] == ' ' || cutend[0] == '\t' || cutend[0] == '\r' || cutend[0] == '\n' || cutend[0] == 0))
+	      {
+	        if (cutend[0])
+		  spaceseen = 1;
+		cutend++;
+	      }
+	    /* now replace the cutstart/cutend area */
+	    if (spaceseen)
+	      *(char *)cutstart++ = ' ';
+	    if (cutend < end && cutstart < cutend)
+	      Move((char *)cutend, (char *)cutstart, end - cutend, char);
+	    end -= cutend - cutstart;
+	    dlen -= cutend - cutstart;
+	    SvCUR_set(sv, dlen);
+	    s = cutstart - 1;
+	  }
+    }
+  return dlen > 0;
+}
+
 static int handlechar_bytes;
 
 MODULE = XML::Structured PACKAGE = XML::Structured
@@ -520,6 +653,16 @@ CODE:
       PUSHMARK(&ST(-1));
       call_pv("XML::Structured::_handle_start_slow", G_VOID | G_DISCARD);
       XSRETURN_UNDEF;
+    }
+
+  svp = av_fetch(workav, depth, 0);
+  sv = svp ? *svp : 0;
+  if (sv && SvOK(sv))
+    {
+      if (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PV)
+	sv = (SV *)SvRV(sv);
+      /* add zero byte as element marker */
+      sv_catpvn(sv, "", 1);
     }
 
   svp = av_fetch(workav, depth - 1, 0);
@@ -722,43 +865,10 @@ CODE:
 	      sv = svp ? *svp : 0;
 	      if (sv && SvOK(sv))
 		{
-		  const char *s;
-		  I32 dlen, dlenorig;
-
 		  if (SvROK(sv) && SvTYPE(SvRV(sv)) == SVt_PV)
 		    sv = (SV *)SvRV(sv);
-
-		  /* trim spaces, should only do this when we have either
-		   * seen a sub-element or the dtd specifies one */
-		  dlen = dlenorig = SvCUR(sv);
-		  if (dlen)
-		    {
-		      s = SvPVX(sv) + dlen - 1;
-		      while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n')
-			{
-			  s--;
-			  if (!--dlen)
-			    break;
-			}
-		      if (dlen != dlenorig)
-			{
-			  SvCUR_set(sv, dlen);
-			  dlenorig = dlen;
-			}
-		    }
-		  if (dlen)
-		    {
-		      s = SvPVX(sv);
-		      while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n')
-			{
-			  s++;
-			  if (!--dlen)
-			    break;
-			}
-		      if (dlen != dlenorig)
-			sv_chop(sv, s);
-		    }
-		  if (!dlen)
+		  /* trim spaces around sub-elements (marked with \0) */
+		  if (!trim_content(sv))
 		    {
 		      /* trimmed everything, delete _content element */
 		      HV *hv = (HV *)SvRV(outsv);
