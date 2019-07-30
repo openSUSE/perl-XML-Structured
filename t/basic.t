@@ -5,6 +5,7 @@ use Test::More tests => 18;
 
 BEGIN { $XML::Structured::preferred_parser = $ENV{'PREFERRED_PARSER'} }
 BEGIN { $XML::Structured::force_preferred_parser = 1 }
+BEGIN { $XML::Structured::pureperl = $ENV{'PUREPERL'} }
 use XML::Structured;
 
 #######################

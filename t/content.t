@@ -1,10 +1,11 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 BEGIN { $XML::Structured::preferred_parser = $ENV{'PREFERRED_PARSER'} }
 BEGIN { $XML::Structured::force_preferred_parser = 1 }
+BEGIN { $XML::Structured::pureperl = $ENV{'PUREPERL'} }
 use XML::Structured;
 
 #######################
@@ -103,3 +104,18 @@ my $data6 = {
   }
 };
 is_deeply(XMLin($dtd, $xml6), $data6, 'data 6');
+
+#######################
+
+my $xml7 = qq{
+<bar>
+  <user> </user>
+</bar>
+};
+my $data7 = {
+  'user' => {
+  '_content' => ' ',
+  }
+};
+is_deeply(XMLin($dtd, $xml7), $data7, 'data 7');
+
