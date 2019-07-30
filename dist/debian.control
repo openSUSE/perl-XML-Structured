@@ -1,0 +1,17 @@
+Source: libxml-structured-perl
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 7), perl (>= 5.6.10-12), libxml-parser-perl, libxml-sax-perl
+Maintainer: Michael Schroeder <mls@suse.de>
+Standards-Version: 3.8.0
+
+Package: libxml-structured-perl
+Architecture: any
+Depends: ${perl:Depends}
+Description: Provides a way to convert XML data into a predefined perl data structure and
+ back to XML. Unlike with modules like XML::Simple, it is an error if the XML
+ data does not match the provided skeleton (the "DTD").
+ Another advantage is that the order of the attributes and elements is taken
+ from the DTD when converting back to xml.
+
+
