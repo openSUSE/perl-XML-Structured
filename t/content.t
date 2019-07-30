@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Test::More tests => 5;
+use Test::More tests => 6;
 
 BEGIN { $XML::Structured::preferred_parser = $ENV{'PREFERRED_PARSER'} }
 BEGIN { $XML::Structured::force_preferred_parser = 1 }
@@ -62,8 +62,8 @@ my $data4 = {
 
 is_deeply(XMLin($dtd, XMLout($dtd, $data4)), $data4, 'data 4');
 
-
 #######################
+
 my $xml5 = qq{
 <bar>
   <user>
@@ -85,3 +85,21 @@ my $data5 = {
 };
 
 is_deeply(XMLin($dtd, $xml5), $data5, 'data 5');
+
+#######################
+
+my $xml6 = qq{
+<bar>
+  <user> 
+    <login>foo</login>
+    <password>foo</password>
+  </user>
+</bar>
+};
+my $data6 = {
+  'user' => {
+  'login' => 'foo',
+  'password' => 'foo',
+  }
+};
+is_deeply(XMLin($dtd, $xml6), $data6, 'data 6');

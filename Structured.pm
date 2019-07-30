@@ -243,8 +243,10 @@ sub _handle_end_slow {
   if ($out && defined($chr)) {
     $chr = \$out->{'_content'} unless ref($chr);
     if ($$chr =~ /\0/s) {
-      $$chr =~ s/^[ \t\r\n\0]*\0[ \t]*\r?\n?//s;
-      $$chr =~ s/\r?\n?[ \t]*\0[ \t\r\n\0]*$//s;
+      if ($$chr =~ s/\A[ \t\r\n\0]*\0[ \t]*\r?\n?//s) {
+	$$chr = '' if $$chr =~ /\A[ \t\r\n\0]*\z/s;
+      }
+      $$chr =~ s/\r?\n?[ \t]*\0[ \t\r\n\0]*\z//s;
       if ($$chr =~ /\0/s) {
         $$chr =~ s/(?<![ \t\r\n\0])\0+(?![ \t\r\n\0])//sg;
         $$chr =~ s/[ \t\r\n]*\0[ \t\r\n\0]*/ /sg;

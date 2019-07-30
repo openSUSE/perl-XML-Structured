@@ -373,7 +373,9 @@ trim_content(SV *sv)
 	  if (!--dlen)
 	    break;
 	}
-      if (dlen0 > 1)
+      /* dlen0 >= 1 && dlen == 0 means the string contains only
+         whitespace and newlines */
+      if (dlen0 > 1 && dlen)
 	{
 	  dlen = dlen0 - 1;
 	  s = SvPVX(sv) + dlen - 1;
