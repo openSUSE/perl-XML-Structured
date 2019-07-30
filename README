@@ -17,11 +17,11 @@ BUILDING/INSTALLING
 
 VERSION
 
-  This is version 1.3 of XML::structured
+  This is version 1.3 of XML::Structured
 
 LICENSE
 
-  Copyright 2006 Michael Schroeder mls@suse.de
+  Copyright 2006-2019 Michael Schroeder mls@suse.de
 
   This library is free software; you can redistribute it and/or modify
   it under the same terms as Perl itself. 
