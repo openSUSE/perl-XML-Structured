@@ -87,13 +87,13 @@ sub _workout {
       }
       die("unknown alternative '$alt'\n");
     }
-    die("excess hash elements in alternative\n") if keys %d2 > 1;
+    die("excess hash elements in alternative: ".join(', ', sort keys %d2)."\n") if keys %d2 > 1;
     if ($indent eq '') {
       # special code for top level alternative
       for my $e (@how) {
 	return _workout($e, $d2{$e->[0]}, '') if ref($e) && $d2{$e->[0]};
       }
-      die("no match for alternative '".(keys(%d2))[0]."'\n");
+      die("unknown alternative '".(keys(%d2))[0]."'\n");
     }
     $ret = '';
     $gotel = $inelem = 1;
