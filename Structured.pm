@@ -64,7 +64,7 @@ sub _escape {
     }
   }
   Encode::_utf8_off($d);
-  return $d; 
+  return $d;
 }
 
 sub _workout {
@@ -77,6 +77,26 @@ sub _workout {
   my %d2 = %$d;
   my $gotel = 0;
   if ($am eq '') {
+    if ($d2{'_alternative'}) {
+      my $alt = delete $d2{'_alternative'};
+      for my $e (@how) {
+	my $en = $e;
+	$en = $en->[0] if ref($en);
+	$en = $en->[0] if ref($en);
+	if ($en eq $alt) {
+	  return _workout($e, \%d2, $indent, $fh);
+	}
+      }
+      die("unknown alternative '$alt'\n");
+    }
+    die("excess hash elements in alternative\n") if keys %d2 > 1;
+    if ($indent eq '') {
+      # special code for top level alternative
+      for my $e (@how) {
+	return _workout($e, $d2{$e->[0]}, '') if ref($e) && $d2{$e->[0]};
+      }
+      die("no match for alternative '".keys(%d2)."'\n");
+    }
     $ret = '';
     $gotel = $inelem = 1;
     $indent = substr($indent, 2);
@@ -178,21 +198,29 @@ sub _handle_start_slow {
   my $chr;
 
   my $ke = $known->{$e};
+  my $alt;
   if (!defined($ke)) {
     $ke = $known->{''};
     die("unknown element '$e'\n") unless defined $ke;
     die("bad dtd\n") unless ref $ke;
-    my $ed = {};
-    if (!$ke->[0]) {
-      die("element '' must be singleton\n") if exists $out->{''};
-      $out->{''} = $ed;
+    die("unknown element '$e'\n") unless defined $ke->[1]->{$e};
+    my $kee = $ke->[1]->{$e};
+    if (ref($kee) && defined($kee->[1]->{'_alternative'}) && !$kee->[1]->{'_alternative'}) {
+      $alt = $e;
+      $e = '';
     } else {
-      push @{$out->{''}}, $ed;
+      my $ed = {};
+      if (!$ke->[0]) {
+        die("element '' must be singleton\n") if exists $out->{''};
+        $out->{''} = $ed;
+      } else {
+        push @{$out->{''}}, $ed;
+      }
+      $out = $ed;
+      $known= $ke->[1];
+      $ke = $known->{$e};
+      die("unknown element '$e'\n") unless defined $ke;
     }
-    $out = $ed;
-    $known= $ke->[1];
-    $ke = $known->{$e};
-    die("unknown element '$e'\n") unless defined $ke;
   }
   if (!ref($ke)) {
     die("element '$e' contains attributes @{[keys %{{@a}}]}\n") if @a;
@@ -214,8 +242,13 @@ sub _handle_start_slow {
     } else {
       push @{$out->{$e}}, $ed;
     }
-    $known= $ke->[1];
     $out = $ed;
+    $known = $ke->[1];
+    if (defined($alt)) {
+      $out->{'_alternative'} = $alt;
+      $ke = $known->{$alt};
+      $known = $ke->[1];
+    }
     while (@a > 1) {
       my ($a, $av) = splice(@a, 0, 2);
       die("element '$e' contains unknown attribute '$a'\n") unless defined $known->{$a};
@@ -271,16 +304,19 @@ sub _handle_char_slow {
 
 sub _toknown {
   my ($me, @dtd) = @_;
-  my %known = map {ref($_) ? (!@$_ ? () : (ref($_->[0]) ? $_->[0]->[0] : $_->[0] => $_)) : ($_=> $_)} @dtd;
+  my %known = map {ref($_) ? (!@$_ ? ()
+                                   : (ref($_->[0]) ? $_->[0]->[0] : $_->[0] => $_))
+                           : ($_ => $_)
+                  } @dtd;
   for my $v (values %known) {
     if (!ref($v)) {
-      $v = 0;
+      $v = 0;				# attribute or simple element
     } elsif (@$v == 1 && !ref($v->[0])) {
-      $v = 1;
+      $v = 1;				# array of simple elements
     } elsif (@$v == 1) {
-      $v = [1, _toknown(@{$v->[0]}) ];
+      $v = [1, _toknown(@{$v->[0]}) ];	# array of complex elements
     } else {
-      $v = [0, _toknown(@$v) ];
+      $v = [0, _toknown(@$v) ];		# complex element
     }
   }
   $known{'.'} = $me;
@@ -405,29 +441,12 @@ sub XMLinfile {
 sub XMLout {
   my ($dtd, $d) = @_;
   die("parameter is not a hash\n") unless UNIVERSAL::isa($d, 'HASH');
-  if ($dtd->[0] eq '') {
-    die("excess hash elements\n") if keys %$d > 1;
-    for my $el (@$dtd) {
-      return _workout($el, $d->{$el->[0]}, '') if ref($el) && $d->{$el->[0]};
-    }
-    die("no match for alternative\n");
-  }
   return _workout($dtd, $d, '');
 }
 
-# XXX: should stream into the io handle
 sub _XMLout_file {
   my ($dtd, $d, $fh) = @_;
-  if ($dtd->[0] eq '') {
-    die("excess hash elements\n") if keys %$d > 1;
-    for my $el (@$dtd) {
-      next unless ref($el) && $d->{$el->[0]};
-      _workout($el, $d->{$el->[0]}, '', $fh);
-      $fh->flush() or die("XMLout: write error: $!\n");
-      return 1;
-    }
-    die("no match for alternative\n");
-  }
+  die("parameter is not a hash\n") unless UNIVERSAL::isa($d, 'HASH');
   _workout($dtd, $d, '', $fh);
   $fh->flush() or die("XMLout: write error: $!\n");
   return 1;
@@ -677,7 +696,7 @@ the xml string created by XMLout() will be:
     <user login="foo">
       <address street="broadway 7" city="new york"/>
       <address street="rural road 12" city="tempe"/>
-    hello world    
+    hello world
     </user>
 
 The exact input cannot be re-created, as the positions and the
@@ -687,12 +706,12 @@ fragmentation of the content data is lost.
 
 B<XML::Structured> requires either L<XML::Parser> or L<XML::SAX>.
 
-=head1 COPYRIGHT 
+=head1 COPYRIGHT
 
 Copyright 2006-2019 Michael Schroeder E<lt>mls@suse.deE<gt>
 
 This library is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. 
+under the same terms as Perl itself.
 
 =cut
 

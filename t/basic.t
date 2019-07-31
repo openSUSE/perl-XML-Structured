@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Test::More tests => 18;
+use Test::More tests => 26;
 
 BEGIN { $XML::Structured::preferred_parser = $ENV{'PREFERRED_PARSER'} }
 BEGIN { $XML::Structured::force_preferred_parser = 1 }
@@ -192,3 +192,66 @@ is_deeply(XMLin($dtd7, $xml7_2), $data7_2, 'xml->data 7_2');
 is(XMLout($dtd7, $data7_2), $xml7_2, 'data->xml 7_2');
 
 #######################
+
+my $dtd8 = [
+  'tree' =>
+     [[ '' => 
+      [ 'apple' =>
+          'color',
+	  '_alternative',
+      ],
+      [ 'peach' =>
+          'color',
+	  '_alternative',
+      ],
+    ]]
+];
+
+my $xml8_1 = qq{<tree>
+  <apple color="red"/>
+</tree>
+};
+my $data8_1 = {
+  '' => [ { 'color' => 'red', '_alternative' => 'apple' } ],
+};
+my $xml8_2 = qq{<tree>
+  <peach color="yellow"/>
+  <peach color="green"/>
+</tree>
+};
+my $data8_2 = {
+  '' => [ { 'color' => 'yellow', '_alternative' => 'peach' }, { 'color' => 'green', '_alternative' => 'peach' } ],
+};
+is_deeply(XMLin($dtd8, $xml8_1), $data8_1, 'xml->data 8_1');
+is(XMLout($dtd8, $data8_1), $xml8_1, 'data->xml 8_1');
+is_deeply(XMLin($dtd8, $xml8_2), $data8_2, 'xml->data 8_2');
+is(XMLout($dtd8, $data8_2), $xml8_2, 'data->xml 8_2');
+
+#######################
+
+my $dtd9 = [
+  '' => 
+    [ 'apple' =>
+        'color',
+	'_alternative',
+    ],
+    [ 'peach' =>
+        'color',
+	'_alternative',
+    ],
+];
+my $xml9_1 = qq{<apple color="red"/>
+};
+my $data9_1 = {
+  'color' => 'red', '_alternative' => 'apple',
+};
+my $xml9_2 = qq{<peach color="yellow"/>
+};
+
+my $data9_2 = {
+  'color' => 'yellow', '_alternative' => 'peach',
+};
+is_deeply(XMLin($dtd9, $xml9_1), $data9_1, 'xml->data 9_1');
+is(XMLout($dtd9, $data9_1), $xml9_1, 'data->xml 9_1');
+is_deeply(XMLin($dtd9, $xml9_2), $data9_2, 'xml->data 9_2');
+is(XMLout($dtd9, $data9_2), $xml9_2, 'data->xml 9_2');
