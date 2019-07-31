@@ -83,9 +83,7 @@ sub _workout {
 	my $en = $e;
 	$en = $en->[0] if ref($en);
 	$en = $en->[0] if ref($en);
-	if ($en eq $alt) {
-	  return _workout($e, \%d2, $indent, $fh);
-	}
+	return _workout($e, \%d2, $indent, $fh) if $en eq $alt;
       }
       die("unknown alternative '$alt'\n");
     }
@@ -95,7 +93,7 @@ sub _workout {
       for my $e (@how) {
 	return _workout($e, $d2{$e->[0]}, '') if ref($e) && $d2{$e->[0]};
       }
-      die("no match for alternative '".keys(%d2)."'\n");
+      die("no match for alternative '".(keys(%d2))[0]."'\n");
     }
     $ret = '';
     $gotel = $inelem = 1;
