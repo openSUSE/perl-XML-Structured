@@ -47,7 +47,7 @@ sub _escape {
   $d =~ s/</&lt;/sg;
   $d =~ s/>/&gt;/sg;
   $d =~ s/"/&quot;/sg;
-  $d =~ tr/[\000-\010\013\014\016-\037]//d;	# illegal xml
+  $d =~ tr/\000-\010\013\014\016-\037//d;	# illegal xml
   return $d unless $d =~ /[\200-\377]/;		# common case
   eval {
     Encode::_utf8_on($d);
@@ -87,13 +87,13 @@ sub _workout {
       }
       die("unknown alternative '$alt'\n");
     }
-    die("excess hash elements in alternative: ".join(', ', sort keys %d2)."\n") if keys %d2 > 1;
+    die("excess hash elements in alternative\n") if keys %d2 > 1;
     if ($indent eq '') {
       # special code for top level alternative
       for my $e (@how) {
 	return _workout($e, $d2{$e->[0]}, '') if ref($e) && $d2{$e->[0]};
       }
-      die("unknown alternative '".(keys(%d2))[0]."'\n");
+      die("no match for alternative '".(keys(%d2))[0]."'\n");
     }
     $ret = '';
     $gotel = $inelem = 1;
